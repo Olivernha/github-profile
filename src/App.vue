@@ -1,17 +1,76 @@
-<script setup></script>
+<script setup>
+import { onMounted, reactive, ref ,computed ,watch } from "vue";
+import TheAccStatus from "./components/TheAccStatus.vue";
+import TheAvatar from "./components/TheAvatar.vue";
+import TheRepositroy from "./components/TheRepositroy.vue";
+import TheSearch from "./components/TheSearch.vue";
+
+const search = ref('github');
+const showAllRepos = ref(false);
+
+const result = reactive({
+  name:'',
+  bio:'',
+  avatar_url:'',
+  followers:'',
+  following:'',
+  location:'',
+  repo:[],
+})
+
+
+const displayedRepos = computed(() => {
+  return showAllRepos.value ? result.repo : result.repo.slice(0, 4);
+});
+
+const fetchAllRepo = () => {
+  showAllRepos.value = true;
+};
+const fetchUserData = async (username) => {
+  try {
+    const response = await fetch(`https://api.github.com/users/${username}`);
+    if (!response.ok) throw new Error('User not found');
+    const data = await response.json();
+    result.name = data.name || 'No name available';
+    result.bio = data.bio || 'No bio available';
+    result.avatar_url = data.avatar_url;
+    result.followers = data.followers;
+    result.following = data.following;
+    result.location = data.location || 'No location available';
+    
+    // Fetch repositories
+    const repoResponse = await fetch(data.repos_url);
+    if (!repoResponse.ok) throw new Error('Repositories not found');
+    result.repo = await repoResponse.json();
+  } catch (error) {
+    console.error(error);
+  }
+};
+watch(search, async (newSearch) => {
+  if (newSearch.trim() !== '') {
+    await fetchUserData(newSearch);
+    showAllRepos.value = false; 
+  }
+});
+onMounted(async () => {
+  await fetchUserData(search.value);
+});
+
+</script>
 
 <template>
   <main class="min-h-screen bg-[#364153]">
     <header class="flex justify-center h-72">
-      <div
-        class="flex justify-between bg-[#20293A] px-6 py-3 rounded-lg h-16 mt-10"
-      >
-        <img src="./assets/resources/Search.svg" alt="logo" class="w-5" />
-        <input
-          type="text"
-          class="ml-3 border-none text-white md:w-100 placeholder:font-normal focus:outline-none"
-          placeholder="Username"
-        />
+      <div class="flex flex-col">
+        <TheSearch @search="search = $event"/>
+        <div v-if="result" class="flex flex-row bg-[#262E40] rounded-lg p-3 space-x-4 mt-3">
+          <TheAvatar :width="'w-20'" :avatarUrl=result.avatar_url />
+
+          <div class="flex flex-col space-y-2 mt-2">
+            <p class="text-xl font-bold text-white">{{ result.name }}</p>
+            <p class="text-[#97A3B6]">{{ result.bio }}</p>
+          </div>
+        </div>
       </div>
     </header>
     <div class="max-w-7xl mx-auto">
@@ -19,49 +78,10 @@
         <div class="flex">
           <!--image container-->
           <div class="-mt-12 bg-[#364153] p-3 rounded-lg">
-            <img
-              src="./assets/resources/github-mark-white.svg"
-              alt="logo"
-              class="w-40 p-1 bg-black rounded-lg"
-            />
+            <TheAvatar :width="'w-40'" :avatarUrl=result.avatar_url />
           </div>
           <!-- account status-->
-          <div
-            class="flex justify-between h-16 items-center space-x-5 ml-10 mt-2"
-          >
-            <div
-              class="flex justify-between p-2 bg-[#111729] space-x-5 rounded-lg p-3 text-[#CDD5E0]"
-            >
-              <p class="text-md font-semibold pl-3 py-1">Followers</p>
-              <p
-                class="ext-md font-semibold border-l-2 border-l-[#97A3B6] px-6 py-1"
-              >
-                27839
-              </p>
-            </div>
-            <div
-              class="flex justify-between p-2 bg-[#111729] space-x-5 rounded-lg p-3 text-[#CDD5E0]"
-            >
-              <p class="inline-block text-md font-semibold pl-3 py-1">
-                Following
-              </p>
-              <p
-                class="ext-md font-semibold border-l-2 border-l-[#97A3B6] px-6 py-1"
-              >
-                0
-              </p>
-            </div>
-            <div
-              class="flex justify-between p-2 bg-[#111729] space-x-5 rounded-lg p-3 text-[#CDD5E0]"
-            >
-              <p class="text-md font-semibold pl-3 py-1">Location</p>
-              <p
-                class="ext-md font-semibold border-l-2 border-l-[#97A3B6] px-6 py-1"
-              >
-                San Francisco,CA
-              </p>
-            </div>
-          </div>
+          <TheAccStatus :followers=result.followers :following=result.following :location=result.location />
         </div>
       </section>
       <section class="pb-5">
@@ -72,102 +92,11 @@
           </div>
           <!-- repo-->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
-              class="flex flex-col space-y-3 bg-gradient-to-br from-[#111729] to-[#1D1B48] text-[#CDD5E0] rounded-lg p-6"
-            >
-              <p class="font-semibold text-xl">.github</p>
-              <p class="font-normal text-[#97A3B6]">
-                Community health files for @Github organizations
-              </p>
-              <div class="flex flex-row items-center space-x-4 text-[#97A3B6]">
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Chield_alt.svg" alt="" />
-                  <p>MIT</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Nesting.svg" alt="" />
-                  <p>2,369</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Star.svg" alt="" />
-                  <p class="text-sm ml-2">703</p>
-                </div>
-                <p class="text-sm ml-3">updated 4 days ago</p>
-              </div>
-            </div>
-            <div
-              class="flex flex-col space-y-3 bg-gradient-to-br from-[#111729] to-[#1D1B48] text-[#CDD5E0] rounded-lg p-6"
-            >
-              <p class="font-semibold text-xl">.github</p>
-              <p class="font-normal text-[#97A3B6]">
-                Community health files for @Github organizations
-              </p>
-              <div class="flex flex-row items-center space-x-4 text-[#97A3B6]">
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Chield_alt.svg" alt="" />
-                  <p>MIT</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Nesting.svg" alt="" />
-                  <p>2,369</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Star.svg" alt="" />
-                  <p class="text-sm ml-2">703</p>
-                </div>
-                <p class="text-sm ml-3">updated 4 days ago</p>
-              </div>
-            </div>
-            <div
-              class="flex flex-col space-y-3 bg-gradient-to-br from-[#111729] to-[#1D1B48] text-[#CDD5E0] rounded-lg p-6"
-            >
-              <p class="font-semibold text-xl">.github</p>
-              <p class="font-normal text-[#97A3B6]">
-                Community health files for @Github organizations
-              </p>
-              <div class="flex flex-row items-center space-x-4 text-[#97A3B6]">
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Chield_alt.svg" alt="" />
-                  <p>MIT</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Nesting.svg" alt="" />
-                  <p>2,369</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Star.svg" alt="" />
-                  <p class="text-sm ml-2">703</p>
-                </div>
-                <p class="text-sm ml-3">updated 4 days ago</p>
-              </div>
-            </div>
-            <div
-              class="flex flex-col space-y-3 bg-gradient-to-br from-[#111729] to-[#1D1B48] text-[#CDD5E0] rounded-lg p-6"
-            >
-              <p class="font-semibold text-xl">.github</p>
-              <p class="font-normal text-[#97A3B6]">
-                Community health files for @Github organizations
-              </p>
-              <div class="flex flex-row items-center space-x-4 text-[#97A3B6]">
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Chield_alt.svg" alt="" />
-                  <p>MIT</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Nesting.svg" alt="" />
-                  <p>2,369</p>
-                </div>
-                <div class="flex flex-row items-center space-x-2">
-                  <img src="./assets/resources/Star.svg" alt="" />
-                  <p class="text-sm ml-2">703</p>
-                </div>
-                <p class="text-sm ml-3">updated 4 days ago</p>
-              </div>
-            </div>
+            <TheRepositroy :repo="displayedRepos" />
           </div>
 
-          <div class="flex justify-center my-5 text-[#CDD5E0]">
-            <p>View All repositories</p>
+          <div v-if="!showAllRepos && result.repo.length > 4" class="flex justify-center my-5 text-[#CDD5E0]">
+            <a href="#" @click.prevent="fetchAllRepo" class="hover:text-white cursor-pointer">View All repositories</a>
           </div>
         </div>
       </section>
