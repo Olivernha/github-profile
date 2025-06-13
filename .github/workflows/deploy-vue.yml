@@ -10,7 +10,7 @@ jobs:
     permissions:
       pages: write      # Required for deployment to GitHub Pages
       id-token: write   # Required for using OIDC to get credentials
-
+      contents: write   # Required for actions/checkout
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
